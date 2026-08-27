@@ -5,6 +5,7 @@ const dbMocks = vi.hoisted(() => ({
   createConversationMessage: vi.fn(),
   listConversation: vi.fn(),
   listLoginActivity: vi.fn(),
+  listCheckins: vi.fn(),
 }));
 
 const llmMocks = vi.hoisted(() => ({
@@ -13,7 +14,6 @@ const llmMocks = vi.hoisted(() => ({
 
 vi.mock("./db", () => ({
   ...dbMocks,
-  listCheckins: vi.fn().mockResolvedValue([]),
   createCheckin: vi.fn(),
 }));
 
@@ -46,6 +46,9 @@ describe("wellbeing procedures", () => {
     dbMocks.listConversation.mockResolvedValue([
       { id: 1, userId: 7, sender: "user", content: "Work has felt busy all week.", isSafetyGuidance: false, createdAt: new Date() },
     ]);
+    dbMocks.listCheckins.mockResolvedValue([
+      { id: 1, userId: 7, mood: "partly_cloudy", note: "Tension before meetings", createdAt: new Date() },
+    ]);
     llmMocks.invokeLLM.mockResolvedValue({
       choices: [{ message: { role: "assistant", content: "That sounds exhausting after a long week. Which part of work feels hardest to step away from tonight?" } }],
     });
@@ -60,10 +63,13 @@ describe("wellbeing procedures", () => {
     expect(result.response).toContain("Which part of work");
     expect(llmMocks.invokeLLM).toHaveBeenCalledWith(expect.objectContaining({
       model: "gpt-5-mini",
-      maxCompletionTokens: 320,
+      maxCompletionTokens: 460,
+      reasoning: { effort: "low" },
       messages: expect.arrayContaining([
         expect.objectContaining({ content: "Work has felt busy all week." }),
         expect.objectContaining({ content: "I feel overwhelmed today." }),
+        expect.objectContaining({ content: expect.stringContaining("Ground mode") }),
+        expect.objectContaining({ content: expect.stringContaining("Tension before meetings") }),
       ]),
     }));
     expect(dbMocks.createConversationMessage).toHaveBeenNthCalledWith(1, 7, "user", "I feel overwhelmed today.");
@@ -89,7 +95,7 @@ describe("wellbeing procedures", () => {
 
     const result = await caller.wellbeing.chat.send({ message: "I have been so anxious about tomorrow." });
 
-    expect(result.response).toContain("uncertain");
+    expect(result.response).toContain("what could go wrong");
     expect(dbMocks.createConversationMessage).toHaveBeenNthCalledWith(2, 7, "companion", result.response, false);
   });
 
@@ -102,6 +108,38 @@ describe("wellbeing procedures", () => {
     const result = await caller.wellbeing.chat.send({ message: "I keep worrying about tomorrow’s presentation." });
 
     expect(result.response).toContain("presentation tomorrow");
+    expect(dbMocks.createConversationMessage).toHaveBeenNthCalledWith(2, 7, "companion", result.response, false);
+  });
+
+  it("uses reflection mode for loss-oriented messages and persists the response", async () => {
+    llmMocks.invokeLLM.mockResolvedValue({
+      choices: [{ message: { role: "assistant", content: "Missing your grandfather during a difficult week can make the quiet moments feel heavier. What is one small memory of him that feels close today?" } }],
+    });
+    const caller = appRouter.createCaller(createContext());
+
+    const result = await caller.wellbeing.chat.send({ message: "I miss my grandfather a lot this week." });
+
+    expect(result.showSafetyGuidance).toBe(false);
+    expect(result.response).toContain("grandfather");
+    expect(llmMocks.invokeLLM).toHaveBeenCalledWith(expect.objectContaining({
+      messages: expect.arrayContaining([expect.objectContaining({ content: expect.stringContaining("Reflect mode") })]),
+    }));
+    expect(dbMocks.createConversationMessage).toHaveBeenNthCalledWith(2, 7, "companion", result.response, false);
+  });
+
+  it("uses planning mode for practical next-step requests and persists the response", async () => {
+    llmMocks.invokeLLM.mockResolvedValue({
+      choices: [{ message: { role: "assistant", content: "Your presentation tomorrow is the clearest pressure point here. Choose the opening two minutes to rehearse once tonight, then let that be enough for now." } }],
+    });
+    const caller = appRouter.createCaller(createContext());
+
+    const result = await caller.wellbeing.chat.send({ message: "I have a presentation tomorrow. What should I do tonight?" });
+
+    expect(result.showSafetyGuidance).toBe(false);
+    expect(result.response).toContain("presentation tomorrow");
+    expect(llmMocks.invokeLLM).toHaveBeenCalledWith(expect.objectContaining({
+      messages: expect.arrayContaining([expect.objectContaining({ content: expect.stringContaining("Planning mode") })]),
+    }));
     expect(dbMocks.createConversationMessage).toHaveBeenNthCalledWith(2, 7, "companion", result.response, false);
   });
 

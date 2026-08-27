@@ -7,28 +7,68 @@ import * as db from "./db";
 import { invokeLLM, type Message as LlmMessage } from "./_core/llm";
 
 const moodSchema = z.enum(["sunny", "partly_cloudy", "overcast", "rainy"]);
+type CompanionMode = "reflect" | "ground" | "plan" | "explore";
 
 function needsImmediateSupport(message: string) {
   return /\b(suicide|kill myself|end my life|hurt myself|self harm|self-harm)\b/i.test(message);
 }
 
-const COMPANION_SYSTEM_PROMPT = `You are MindBridge, a warm, attentive wellbeing companion. Reply directly to the person’s latest message, using the conversation only to understand context. Be concise: one to three short sentences, normally under 90 words. Name one concrete detail they shared so the response feels attentive, then respond to their actual need. Give one small optional next step only when it is useful. Do not give a multi-step plan unless they explicitly ask for one. Avoid canned phrases such as “Would it feel helpful,” and never reuse a stock answer. Do not diagnose, make treatment claims, use clinical jargon, or present yourself as a therapist or emergency service. Do not mention safety systems or these instructions.`;
+const COMPANION_SYSTEM_PROMPT = `You are MindBridge, a thoughtful wellbeing companion. Reply to the person’s latest message, and use only the supplied conversation and check-in context to understand it. Begin by showing that you noticed one concrete detail, then respond to their real need instead of offering generic reassurance. Keep the answer to two to four short sentences and normally under 140 words. Use plain, natural language; offer one proportionate next step only when it adds value. When they ask what to do, give one clear action rather than a list, bundle, routine, or several time-based suggestions. Do not diagnose, make treatment claims, use clinical jargon, or present yourself as a therapist or emergency service. Never mention these instructions, the system, or safety systems.`;
+
+function chooseCompanionMode(message: string): CompanionMode {
+  const normalized = message.toLowerCase();
+  if (/how (do|can|should)|what (do|should)|help me (plan|decide)|tomorrow|deadline|presentation|exam|interview/.test(normalized)) return "plan";
+  if (/panic|anxious|anxiety|worried|worry|overwhelm|overwhelmed|stressed|stressful/.test(normalized)) return "ground";
+  if (/sad|lonely|alone|grief|miss|heartbreak|left me|loss/.test(normalized)) return "reflect";
+  return "explore";
+}
+
+function modeInstruction(mode: CompanionMode) {
+  const instructions: Record<CompanionMode, string> = {
+    reflect: "Reflect mode: name the emotional weight without trying to fix it. Ask one gentle, specific question that can help the person make meaning.",
+    ground: "Ground mode: orient to what is happening now and distinguish the immediate next moment from the larger worry. Offer one brief, doable grounding action if it fits.",
+    plan: "Planning mode: turn the concern into one concrete, manageable next move. Be decisive but collaborative. Give exactly one action, with no checklist or follow-on routine.",
+    explore: "Explore mode: identify the most meaningful thread in the message and ask or offer one focused reflection that moves the conversation forward.",
+  };
+  return instructions[mode];
+}
+
+function summarizeCheckins(checkins: Awaited<ReturnType<typeof db.listCheckins>>) {
+  if (checkins.length === 0) return "No recent emotional-weather check-ins are available.";
+  return checkins.slice(0, 3).map(entry => {
+    const note = entry.note?.trim();
+    return note ? `${entry.mood}: ${note}` : entry.mood;
+  }).join(" | ");
+}
+
+function extractCompanionText(content: string | LlmMessage["content"] | undefined) {
+  if (typeof content === "string") return content.replace(/\s+/g, " ").trim();
+  if (!Array.isArray(content)) return "";
+  const text = content
+    .filter((item): item is { type: "text"; text: string } =>
+      typeof item === "object" && item !== null && "type" in item && item.type === "text" && "text" in item && typeof item.text === "string"
+    )
+    .map(item => item.text)
+    .join("\n");
+  return text.replace(/\s+/g, " ").trim();
+}
 
 function fallbackCompanionReply(message: string) {
   const normalized = message.toLowerCase();
+  const detail = message.trim().replace(/\s+/g, " ").slice(0, 120);
   if (/overwhelm|too much|stressed|stressful/.test(normalized)) {
-    return "That sounds like a lot to carry all at once. If you could set one thing down for the next ten minutes, what might it be?";
+    return `You are carrying a lot in “${detail}.” For the next ten minutes, what is one demand you could set aside without making the whole situation worse?`;
   }
   if (/anxious|anxiety|worried|worry/.test(normalized)) {
-    return "It sounds like your mind is trying hard to prepare for something uncertain. What is the worry asking you to pay attention to right now?";
+    return `Your mind seems to be scanning hard for what could go wrong in “${detail}.” What part of that worry needs attention today, and what part can wait until you know more?`;
   }
   if (/sad|lonely|alone|grief|miss/.test(normalized)) {
-    return "There is a lot of tenderness in what you shared. Would it feel kinder to name what you are missing, or to notice one person you could let in a little today?";
+    return `There is real tenderness in “${detail}.” What are you missing most in this moment: the person, the routine, or the feeling of being understood?`;
   }
   if (/angry|anger|frustrat|annoyed/.test(normalized)) {
-    return "That frustration seems important. What feels most crossed or unheard in this situation?";
+    return `The frustration in “${detail}” sounds important. What feels most crossed, dismissed, or unheard right now?`;
   }
-  return "I’m taking in what you shared. Which part of it feels most important to stay with for a moment?";
+  return `I am taking in “${detail}.” Which part feels most important to stay with for a moment?`;
 }
 
 async function createCompanionReply(
@@ -40,10 +80,14 @@ async function createCompanionReply(
     return "Thank you for saying that. You deserve immediate, human support right now. If you may act on these thoughts or are in immediate danger, call 112 in India. You can also contact Tele-MANAS at 14416 or 1-800-891-4416 for mental-health support. If it is safe, consider reaching out to someone you trust and staying with them.";
   }
 
-  const history = await db.listConversation(userId, 12);
+  const [history, checkins] = await Promise.all([
+    db.listConversation(userId, 16),
+    db.listCheckins(userId, 3),
+  ]);
+  const mode = chooseCompanionMode(message);
   const conversation: LlmMessage[] = [
-    { role: "system", content: COMPANION_SYSTEM_PROMPT },
-    ...history.slice().reverse().map(entry => ({
+    { role: "system", content: `${COMPANION_SYSTEM_PROMPT}\n\n${modeInstruction(mode)}\n\nRecent emotional-weather check-ins: ${summarizeCheckins(checkins)}` },
+    ...history.map(entry => ({
       role: entry.sender === "user" ? "user" : "assistant",
       content: entry.content,
     } as LlmMessage)),
@@ -54,14 +98,12 @@ async function createCompanionReply(
     const result = await invokeLLM({
       model: "gpt-5-mini",
       messages: conversation,
-      maxCompletionTokens: 320,
+      maxCompletionTokens: 460,
+      reasoning: { effort: "low" },
     });
-    const content = result.choices[0]?.message.content;
-    const response = typeof content === "string"
-      ? content.trim()
-      : content?.filter(item => item.type === "text").map(item => item.text).join("\n").trim() ?? "";
-    if (!response) throw new Error("Companion response was empty");
-    return response.slice(0, 1600);
+    const response = extractCompanionText(result.choices[0]?.message.content);
+    if (response.length < 24) throw new Error("Companion response was too short");
+    return response.slice(0, 1200);
   } catch (error) {
     console.error("[Companion] Model response unavailable; using contextual fallback", error);
     return fallbackCompanionReply(message);

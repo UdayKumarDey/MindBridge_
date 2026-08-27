@@ -29,3 +29,7 @@
 - [x] Diagnose and fix the reported MindBridge site failure, then verify the recovered live experience.
 - [x] Diagnose and repair the production startup and routing path causing the site not to load.
 - [x] Validate the Vercel-style API entrypoint and browser load path after the production routing fix.
+- [x] Improve the companion’s conversational proficiency with richer message context, deliberate response modes, and practical response-quality evaluation.
+- [x] Verify the upgraded companion across reflection, planning, anxiety, and immediate-support scenarios.
+- [x] Add explicit companion regression coverage for reflection, planning, anxiety, and immediate-support response modes and persistence.
+- [x] Verify the upgraded chat interface and reflection/planning behavior through browser rendering, route integration, and scenario regression coverage.
