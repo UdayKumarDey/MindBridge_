@@ -18,3 +18,8 @@
 - [x] Verify the chat interface after the context-aware companion update, including loading, error, and safety guidance states.
 - [x] Add testable state-specific verification for the companion chat’s loading, failure, and safety-guidance feedback.
 - [x] Export the completed MindBridge source code to the user-provided GitHub repository.
+- [x] Remove nonessential comments from application-owned source files and review loop constructs for clearer equivalents without changing behavior.
+- [x] Re-run type checks, tests, and the production build after the cleanup.
+- [x] Audit all project-owned source files outside generated dependencies; nonessential comments were removed from application-owned code, while protected template-runtime comments remain untouched in `client/src/_core`, selected generated UI components, and `server/_core`.
+- [x] Audit the remaining template components; comments are intentionally retained only in unmodified template utilities (`AIChatBox`, map and generated UI primitives) and protected runtime files, while MindBridge-authored application code is comment-free.
+- [ ] Synchronize the latest standards-based cleanup changes to the user-provided GitHub repository.
