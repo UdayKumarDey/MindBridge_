@@ -33,3 +33,17 @@
 - [x] Verify the upgraded companion across reflection, planning, anxiety, and immediate-support scenarios.
 - [x] Add explicit companion regression coverage for reflection, planning, anxiety, and immediate-support response modes and persistence.
 - [x] Verify the upgraded chat interface and reflection/planning behavior through browser rendering, route integration, and scenario regression coverage.
+- [x] Verify the latest companion upgrade is synchronized to the user-provided GitHub repository.
+- [x] Verify gpt-oss-120b availability; it was not present in the live project model catalog, so no integration was made.
+- [x] Resolve the gpt-oss-120b request; no configuration test or repository change was made because the model was unavailable and the user chose to retain the current setup.
+- [x] Evaluate no-cost model options to the extent possible: the live catalog did not expose verifiable pricing or an explicit no-cost designation, so no cost-based model switch was made; billing/access questions require Manus Help.
+- [x] Audit the current companion model configuration, context window, response parsing, and safety fallback behavior.
+- [x] Confirm that the current gpt-5-mini setup is configured with recent conversation and check-in context, mode-specific instructions, structured-content parsing, a 460-token response budget, and low reasoning effort.
+- [x] Conclude the model-configuration audit: retain gpt-5-mini with the current safe request shape; the corrected comparison did not justify switching providers or increasing reasoning by default.
+- [x] Define measurable companion quality targets: specificity/contextual recall, brevity within 40–900 characters, and fallback avoidance.
+- [x] Compare two safe gpt-5-mini configurations across four realistic scenarios with the requested parameters: 8-message/320-token and 16-message/460-token histories. Both were concise in 4/4, recalled supplied context in 4/4, and triggered no fallback; the simple specificity metric did not prove the larger configuration superior, so no default switch was made.
+- [x] Record regression evidence for the retained configuration: response-mode, persistence, safety, HTTP-route, type-check, and production-build validation passed; the evaluation supports reliability, not a claim of universal response-quality superiority.
+- [x] Run a corrected comparison that actually varies conversation-history length and token budget, then update the audit record to match the measured parameters.
+- [x] Re-record retained-configuration evidence only after the corrected comparison is complete.
+- [x] Synchronize the latest audited model-configuration state to the user-provided GitHub repository.
+- [x] Verify the resulting GitHub main-branch commit.
