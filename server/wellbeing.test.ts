@@ -60,6 +60,7 @@ describe("wellbeing procedures", () => {
     expect(result.response).toContain("Which part of work");
     expect(llmMocks.invokeLLM).toHaveBeenCalledWith(expect.objectContaining({
       model: "gpt-5-mini",
+      maxCompletionTokens: 320,
       messages: expect.arrayContaining([
         expect.objectContaining({ content: "Work has felt busy all week." }),
         expect.objectContaining({ content: "I feel overwhelmed today." }),
@@ -76,6 +77,8 @@ describe("wellbeing procedures", () => {
 
     expect(result.showSafetyGuidance).toBe(true);
     expect(result.response).toContain("immediate, human support");
+    expect(result.response).toContain("112");
+    expect(result.response).toContain("14416");
     expect(llmMocks.invokeLLM).not.toHaveBeenCalled();
     expect(dbMocks.createConversationMessage).toHaveBeenNthCalledWith(2, 7, "companion", result.response, true);
   });
@@ -87,6 +90,18 @@ describe("wellbeing procedures", () => {
     const result = await caller.wellbeing.chat.send({ message: "I have been so anxious about tomorrow." });
 
     expect(result.response).toContain("uncertain");
+    expect(dbMocks.createConversationMessage).toHaveBeenNthCalledWith(2, 7, "companion", result.response, false);
+  });
+
+  it("accepts text content returned in the model’s array response format", async () => {
+    llmMocks.invokeLLM.mockResolvedValue({
+      choices: [{ message: { role: "assistant", content: [{ type: "text", text: "Your presentation tomorrow is carrying a lot of weight. What would make the first five minutes feel a little more manageable?" }] } }],
+    });
+    const caller = appRouter.createCaller(createContext());
+
+    const result = await caller.wellbeing.chat.send({ message: "I keep worrying about tomorrow’s presentation." });
+
+    expect(result.response).toContain("presentation tomorrow");
     expect(dbMocks.createConversationMessage).toHaveBeenNthCalledWith(2, 7, "companion", result.response, false);
   });
 

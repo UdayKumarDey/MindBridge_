@@ -22,4 +22,10 @@
 - [x] Re-run type checks, tests, and the production build after the cleanup.
 - [x] Audit all project-owned source files outside generated dependencies; nonessential comments were removed from application-owned code, while protected template-runtime comments remain untouched in `client/src/_core`, selected generated UI components, and `server/_core`.
 - [x] Audit the remaining template components; comments are intentionally retained only in unmodified template utilities (`AIChatBox`, map and generated UI primitives) and protected runtime files, while MindBridge-authored application code is comment-free.
-- [ ] Synchronize the latest standards-based cleanup changes to the user-provided GitHub repository.
+- [x] Synchronize the latest standards-based cleanup changes to the user-provided GitHub repository.
+- [x] Improve the companion API response handling and prompt so chat replies are dynamic, context-aware, and reliably rendered.
+- [x] Replace U.S./Canada crisis references with verified India-specific emergency and mental-health support contacts.
+- [x] Add and run tests for the dynamic companion response parsing and India support guidance, then verify the updated UI.
+- [x] Diagnose and fix the reported MindBridge site failure, then verify the recovered live experience.
+- [x] Diagnose and repair the production startup and routing path causing the site not to load.
+- [x] Validate the Vercel-style API entrypoint and browser load path after the production routing fix.

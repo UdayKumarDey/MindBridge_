@@ -19,6 +19,8 @@ describe("CompanionFeedback", () => {
   it("prioritizes immediate-support guidance over other feedback", () => {
     const html = renderToStaticMarkup(createElement(CompanionFeedback, { isLoading: true, hasSendError: true, showSafetyGuidance: true }));
     expect(html).toContain("You deserve support right now");
+    expect(html).toContain("112");
+    expect(html).toContain("14416");
     expect(html).not.toContain("Your message could not be sent");
   });
 });

@@ -37,13 +37,13 @@ async function createCompanionReply(
   needsSupport: boolean
 ) {
   if (needsSupport) {
-    return "Thank you for saying that. You deserve immediate, human support right now. If you may act on these thoughts or are in immediate danger, call your local emergency number now. In the U.S. or Canada, call or text 988. If it is safe, consider reaching out to someone you trust and staying with them.";
+    return "Thank you for saying that. You deserve immediate, human support right now. If you may act on these thoughts or are in immediate danger, call 112 in India. You can also contact Tele-MANAS at 14416 or 1-800-891-4416 for mental-health support. If it is safe, consider reaching out to someone you trust and staying with them.";
   }
 
   const history = await db.listConversation(userId, 12);
   const conversation: LlmMessage[] = [
     { role: "system", content: COMPANION_SYSTEM_PROMPT },
-    ...history.map(entry => ({
+    ...history.slice().reverse().map(entry => ({
       role: entry.sender === "user" ? "user" : "assistant",
       content: entry.content,
     } as LlmMessage)),
@@ -54,10 +54,12 @@ async function createCompanionReply(
     const result = await invokeLLM({
       model: "gpt-5-mini",
       messages: conversation,
-      maxTokens: 180,
+      maxCompletionTokens: 320,
     });
     const content = result.choices[0]?.message.content;
-    const response = typeof content === "string" ? content.trim() : "";
+    const response = typeof content === "string"
+      ? content.trim()
+      : content?.filter(item => item.type === "text").map(item => item.text).join("\n").trim() ?? "";
     if (!response) throw new Error("Companion response was empty");
     return response.slice(0, 1600);
   } catch (error) {

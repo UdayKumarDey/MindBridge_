@@ -17,7 +17,7 @@ export function CompanionFeedback({
   onOpenSupport,
 }: CompanionFeedbackProps) {
   if (showSafetyGuidance) {
-    return <section role="alert" className="rounded-2xl border border-[#E8C795] bg-[#FFF7EF] px-5 py-4 text-sm leading-6 text-[#704C1E]"><strong>You deserve support right now.</strong> If you may be in immediate danger, call your local emergency number. In the U.S. or Canada, call or text 988. <button className="font-bold underline" onClick={onOpenSupport}>Open support options</button></section>;
+    return <section role="alert" className="rounded-2xl border border-[#E8C795] bg-[#FFF7EF] px-5 py-4 text-sm leading-6 text-[#704C1E]"><strong>You deserve support right now.</strong> If you may be in immediate danger, call 112 in India. You can also contact Tele-MANAS at 14416 or 1-800-891-4416. <button className="font-bold underline" onClick={onOpenSupport}>Open support options</button></section>;
   }
 
   if (hasHistoryError || hasSendError) {
