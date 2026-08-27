@@ -17,4 +17,4 @@
 - [x] Add tests for standard AI response persistence and safety fallback behavior, then validate the chat UI.
 - [x] Verify the chat interface after the context-aware companion update, including loading, error, and safety guidance states.
 - [x] Add testable state-specific verification for the companion chat’s loading, failure, and safety-guidance feedback.
-- [ ] Export the completed MindBridge source code to the user-provided GitHub repository.
+- [x] Export the completed MindBridge source code to the user-provided GitHub repository.
