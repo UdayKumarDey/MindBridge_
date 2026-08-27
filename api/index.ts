@@ -3,6 +3,9 @@ import type { Request, Response } from "express";
 
 const app = createMindBridgeApp();
 
-export default function handler(req: Request, res: Response) {
-  return app(req, res);
-}
+const handler = (req: Request, res: Response) => {
+const response = app(req, res);
+return response;
+};
+
+export default handler;
